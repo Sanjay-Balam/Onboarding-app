@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: connection URL lives in prisma.config.ts, not here.
+}
+
+// ── Auth / users ────────────────────────────────────────────────
+// PRD: Admin (business owner) creates Chef accounts. Chef logs in with
+// Admin-provided credentials + optional OTP. Roles are NOT an enum on the
+// user — they live in role_definitions and are linked via assignments.
+
+model User {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String  @unique // doubles as the login ID
+  passwordHash String  @map("password_hash")
+  phone        String? // registered mobile for OTP (Chefs)
+  isActive     Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  roleAssignments UserRoleAssignment[]
+  chefProfile     ChefProfile? // set for Chef users
+  approvedChefs   ChefProfile[]        @relation("ApprovedByAdmin")
+  otpTokens       OtpToken[]
+
+  @@map("users")
+}
+
+// ── RBAC: role definitions + assignments (many-to-many) ─────────
+
+model RoleDefinition {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String  @unique // e.g. ADMIN, CHEF
+  description String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assignments UserRoleAssignment[]
+
+  @@map("role_definitions")
+}
+
+model UserRoleAssignment {
+  userId           String @map("user_id") @db.Uuid
+  roleDefinitionId String @map("role_definition_id") @db.Uuid
+
+  assignedBy String?  @map("assigned_by") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleDefinition RoleDefinition @relation(fields: [roleDefinitionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleDefinitionId])
+  @@index([userId])
+  @@index([roleDefinitionId])
+  @@map("user_role_assignments")
+}
+
+// ── Chef business profile (PRD: chefs_profiles) ─────────────────
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+model ChefProfile {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String           @unique @map("user_id") @db.Uuid
+  is2faEnabled     Boolean          @default(false) @map("is_2fa_enabled") // Admin toggle: OTP on login
+  onboardingStatus OnboardingStatus @default(NOT_STARTED) @map("onboarding_status")
+  approvedAt       DateTime?        @map("approved_at")
+  approvedById     String?          @map("approved_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User?           @relation("ApprovedByAdmin", fields: [approvedById], references: [id])
+  documents  Document[]
+  attendance AttendanceLog[]
+
+  @@index([userId])
+  @@map("chef_profiles")
+}
+
+// ── KYC documents (PRD: document_metadata) ──────────────────────
+// Files live in a private bucket; only the storage key is stored here.
+// Access via signed URLs issued by the backend. No public URLs.
+
+enum DocumentType {
+  AADHAAR_FRONT
+  AADHAAR_BACK
+  PAN
+}
+
+model Document {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chefProfileId String       @map("chef_profile_id") @db.Uuid
+  type          DocumentType
+  storageKey    String       @map("storage_key") // path in private bucket
+  mimeType      String       @map("mime_type") // image/jpeg | image/png | application/pdf
+  sizeBytes     Int          @map("size_bytes")
+  verified      Boolean      @default(false)
+  uploadedAt    DateTime     @default(now()) @map("uploaded_at")
+
+  chef ChefProfile @relation(fields: [chefProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([chefProfileId, type]) // one file per doc slot
+  @@index([chefProfileId])
+  @@map("documents")
+}
+
+// ── Attendance (PRD: attendance_logs) ───────────────────────────
+
+model AttendanceLog {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chefProfileId String   @map("chef_profile_id") @db.Uuid
+  date          DateTime @db.Date // one check-in per calendar day
+  checkInAt     DateTime @default(now()) @map("check_in_at")
+
+  chef ChefProfile @relation(fields: [chefProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([chefProfileId, date])
+  @@index([chefProfileId])
+  @@map("attendance_logs")
+}
+
+// ── 2FA OTP tokens ──────────────────────────────────────────────
+// Hashed OTPs sent via DLT-compliant SMS. Short-lived, single-use.
+
+model OtpToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  codeHash   String    @map("code_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("otp_tokens")
+}
