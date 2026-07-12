@@ -17,6 +17,7 @@ model User {
   id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email        String  @unique // doubles as the login ID
   passwordHash String  @map("password_hash")
+  name         String? // display name (PRD: Admin enters Chef name)
   phone        String? // registered mobile for OTP (Chefs)
   isActive     Boolean @default(true) @map("is_active")
 

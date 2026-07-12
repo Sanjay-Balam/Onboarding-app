@@ -3,14 +3,17 @@
     "module": "commonjs",
     "target": "ES2021",
     "moduleResolution": "node",
+    "rootDir": "./src",
     "declaration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
-    "outDir": "./dist",
-    "baseUrl": "./"
+    "strictPropertyInitialization": false,
+    "sourceMap": true,
+    "outDir": "./dist"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "generated"]
 }

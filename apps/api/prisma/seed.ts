@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { hash } from "bcrypt";
 import { PrismaClient } from "../generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -21,8 +22,8 @@ async function main() {
     }),
   ]);
 
-  // ponytail: placeholder hash — replace once the auth/hashing service exists.
-  const passwordHash = "$2b$10$REPLACE_ME_WITH_A_REAL_BCRYPT_HASH................";
+  // Dev seed password: "admin1234" (both users). Change for real use.
+  const passwordHash = await hash("admin1234", 10);
 
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@chefonboarding.local" },
