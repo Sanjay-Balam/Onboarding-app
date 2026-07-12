@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { compare } from "bcrypt";
+import { randomBytes } from "crypto";
 import { PrismaService } from "../database/prisma.service";
 import { LoginDto } from "../common/dto";
 
@@ -27,8 +28,11 @@ export class AuthService {
       name: user.name,
       roles,
     });
+
+    const csrfToken = randomBytes(24).toString("base64url");
     return {
       accessToken,
+      csrfToken,
       requires2fa: user.is2faEnabled, // frontend shows 2FA page only when true
       user: { id: user.id, email: user.email, name: user.name, roles },
     };

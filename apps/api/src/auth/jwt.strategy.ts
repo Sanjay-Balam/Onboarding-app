@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
-import { ExtractJwt, Strategy } from "passport-jwt";
+import { Request } from "express";
+import { Strategy } from "passport-jwt";
 
 export type JwtPayload = {
   sub: string;
@@ -13,7 +14,8 @@ export type JwtPayload = {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      // JWT comes from the httpOnly cookie, not the Authorization header.
+      jwtFromRequest: (req: Request) => req.cookies?.access_token ?? null,
       secretOrKey: process.env.JWT_SECRET || "dev-only-change-me",
     });
   }

@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/auth.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 
-class TwoFactorScreen extends StatefulWidget {
+class TwoFactorScreen extends ConsumerStatefulWidget {
   const TwoFactorScreen({super.key});
   @override
-  State<TwoFactorScreen> createState() => _TwoFactorScreenState();
+  ConsumerState<TwoFactorScreen> createState() => _TwoFactorScreenState();
 }
 
-class _TwoFactorScreenState extends State<TwoFactorScreen> {
+class _TwoFactorScreenState extends ConsumerState<TwoFactorScreen> {
   final _nodes = List.generate(6, (_) => FocusNode());
   final _ctrls = List.generate(6, (_) => TextEditingController());
   int _seconds = 59;
@@ -96,7 +98,10 @@ class _TwoFactorScreenState extends State<TwoFactorScreen> {
                   width: double.infinity,
                   height: 52,
                   child: FilledButton.icon(
-                    onPressed: () => context.go('/admin'), // TODO: verify OTP via API
+                    onPressed: () { // TODO: verify OTP via API
+                      final user = ref.read(authProvider).user;
+                      context.go(user?.isAdmin == true ? '/admin' : '/chef');
+                    },
                     icon: const Text('Verify Code'),
                     label: const Icon(Icons.arrow_forward, size: 16),
                     style: FilledButton.styleFrom(

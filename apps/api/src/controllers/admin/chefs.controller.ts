@@ -1,12 +1,13 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import { RolesGuard } from "../../auth/roles.guard";
+import { CsrfGuard } from "../../auth/csrf.guard";
 import { CurrentUser, Roles } from "../../common/decorators";
 import { ChefsService } from "../../services/chefs.service";
 import { CreateChefDto, Toggle2faDto } from "../../common/dto";
 
 @Controller("admin/chefs")
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, CsrfGuard)
 @Roles("ADMIN")
 export class AdminChefsController {
   constructor(private readonly chefs: ChefsService) {}
