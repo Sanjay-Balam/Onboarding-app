@@ -29,6 +29,7 @@ export class AuthService {
     });
     return {
       accessToken,
+      requires2fa: user.is2faEnabled, // frontend shows 2FA page only when true
       user: { id: user.id, email: user.email, name: user.name, roles },
     };
   }
