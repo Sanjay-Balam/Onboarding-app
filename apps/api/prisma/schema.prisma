@@ -19,6 +19,7 @@ model User {
   passwordHash String  @map("password_hash")
   name         String? // display name (PRD: Admin enters Chef name)
   phone        String? // registered mobile for OTP (Chefs)
+  avatarKey    String? @map("avatar_key") // profile pic storage key (private bucket)
   isActive     Boolean @default(true) @map("is_active")
   is2faEnabled Boolean @default(false) @map("is_2fa_enabled") // if true, login requires OTP
 

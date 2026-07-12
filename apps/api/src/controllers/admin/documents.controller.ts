@@ -17,6 +17,11 @@ export class AdminDocumentsController {
     return this.documents.listForChef(chefProfileId);
   }
 
+  @Get("documents/:docId/url")
+  viewUrl(@Param("docId") docId: string) {
+    return this.documents.viewUrl(docId);
+  }
+
   @Patch("documents/:docId/verify")
   verify(@Param("docId") docId: string, @Body() dto: VerifyDocumentDto) {
     return this.documents.setVerified(docId, dto.verified);

@@ -11,6 +11,7 @@ import 'screens/admin/admin_profile_screen.dart';
 import 'screens/chef/chef_dashboard_screen.dart';
 import 'screens/chef/chef_attendance_screen.dart';
 import 'screens/chef/chef_onboarding_screen.dart';
+import 'screens/chef/chef_profile_screen.dart';
 
 /// Router is driven by auth state: unauthenticated users can't reach app areas.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -38,6 +39,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/chef', builder: (_, __) => const ChefDashboardScreen()),
       GoRoute(path: '/chef/attendance', builder: (_, __) => const ChefAttendanceScreen()),
       GoRoute(path: '/chef/onboarding', builder: (_, __) => const ChefOnboardingScreen()),
+      GoRoute(path: '/chef/profile', builder: (_, __) => const ChefProfileScreen()),
     ],
   );
 });

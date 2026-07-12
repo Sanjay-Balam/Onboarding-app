@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { Response } from "express";
 import { AuthService } from "../auth/auth.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { CsrfGuard } from "../auth/csrf.guard";
 import { CurrentUser } from "../common/decorators";
 import { LoginDto } from "../common/dto";
 
@@ -32,6 +34,20 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() u: { userId: string; email: string; name: string | null; roles: string[] }) {
     return { user: { id: u.userId, email: u.email, name: u.name, roles: u.roles } };
+  }
+
+  // Full DB-backed profile for the profile screen.
+  @Get("profile")
+  @UseGuards(JwtAuthGuard)
+  profile(@CurrentUser() u: { userId: string }) {
+    return this.auth.profile(u.userId);
+  }
+
+  @Post("avatar")
+  @UseGuards(JwtAuthGuard, CsrfGuard)
+  @UseInterceptors(FileInterceptor("file"))
+  avatar(@CurrentUser() u: { userId: string }, @UploadedFile() file: Express.Multer.File) {
+    return this.auth.setAvatar(u.userId, file);
   }
 
   @Post("logout")

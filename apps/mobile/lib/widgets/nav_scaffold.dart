@@ -30,7 +30,7 @@ const _chefItems = [
   NavItem(Icons.home_outlined, 'Home', '/chef'),
   NavItem(Icons.fingerprint, 'Attendance', '/chef/attendance'),
   NavItem(Icons.fact_check_outlined, 'Verify', '/chef/onboarding'),
-  NavItem(Icons.person_outline, 'Profile', null),
+  NavItem(Icons.person_outline, 'Profile', '/chef/profile'),
 ];
 
 void _go(BuildContext context, NavItem item) {

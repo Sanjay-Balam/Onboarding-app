@@ -46,7 +46,7 @@ export class ChefsService {
     return this.prisma.chefProfile.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, email: true, name: true, phone: true, isActive: true } },
+        user: { select: { id: true, email: true, name: true, phone: true, isActive: true, is2faEnabled: true } },
         _count: { select: { documents: true, attendance: true } },
       },
     });
@@ -56,7 +56,7 @@ export class ChefsService {
     const chef = await this.prisma.chefProfile.findUnique({
       where: { id: chefProfileId },
       include: {
-        user: { select: { id: true, email: true, name: true, phone: true, isActive: true } },
+        user: { select: { id: true, email: true, name: true, phone: true, isActive: true, is2faEnabled: true } },
         documents: true,
       },
     });
@@ -65,11 +65,10 @@ export class ChefsService {
   }
 
   async setTwoFactor(chefProfileId: string, enabled: boolean) {
-    await this.get(chefProfileId);
-    return this.prisma.chefProfile.update({
-      where: { id: chefProfileId },
-      data: { is2faEnabled: enabled },
-    });
+    // Drives LOGIN 2FA — set it on the user (that's what auth checks).
+    const chef = await this.get(chefProfileId);
+    await this.prisma.user.update({ where: { id: chef.user.id }, data: { is2faEnabled: enabled } });
+    return { id: chefProfileId, is2faEnabled: enabled };
   }
 
   async approve(chefProfileId: string, adminUserId: string) {
