@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api.dart';
-import 'credentials_stub.dart' if (dart.library.html) 'credentials_web.dart';
+
+const _storage = FlutterSecureStorage();
+const _csrfKey = 'csrf_token';
 
 class AuthUser {
   AuthUser({required this.id, required this.email, this.name, required this.roles});
@@ -43,8 +46,10 @@ class AuthController extends StateNotifier<AuthState> {
     }
     final data = res.data as Map<String, dynamic>;
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
-    // csrfToken echoed on mutating requests (double-submit).
-    state = AuthState(user: user, csrfToken: data['csrfToken'] as String?);
+    final csrf = data['csrfToken'] as String?;
+    // csrfToken echoed on mutating requests (double-submit); persist it for restart.
+    state = AuthState(user: user, csrfToken: csrf);
+    if (csrf != null) await _storage.write(key: _csrfKey, value: csrf);
     return LoginResult(requires2fa: data['requires2fa'] == true, user: user);
   }
 
@@ -57,16 +62,19 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   /// Drop local auth state (called on 401 or logout). Router redirects to /login.
-  void clearSession() => state = const AuthState();
+  void clearSession() {
+    state = const AuthState();
+    _storage.delete(key: _csrfKey);
+  }
 
-  /// Restore session on app start from the httpOnly cookie (survives refresh).
+  /// Restore session on app start from the persisted cookie (survives restart).
   Future<void> restore() async {
     try {
       final res = await _dio.get('/auth/me');
       if (res.statusCode == 200 && res.data?['user'] != null) {
         state = AuthState(
           user: AuthUser.fromJson(res.data['user'] as Map<String, dynamic>),
-          csrfToken: readCsrfCookie(),
+          csrfToken: await _storage.read(key: _csrfKey),
         );
       }
     } catch (_) {

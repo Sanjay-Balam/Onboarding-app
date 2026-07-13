@@ -1,2 +1,6 @@
-// Native: TODO wire url_launcher when building mobile. No-op for now.
-void openUrl(String url) {}
+import 'package:url_launcher/url_launcher.dart';
+
+// Native: open the presigned URL in the device browser.
+void openUrl(String url) {
+  launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+}

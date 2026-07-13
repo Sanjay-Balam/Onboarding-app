@@ -14,35 +14,45 @@ function today(): Date {
 export class ChefAttendanceService {
   constructor(private prisma: PrismaService) {}
 
-  private async profileId(userId: string): Promise<string> {
+  private async profile(userId: string) {
     const profile = await this.prisma.chefProfile.findUnique({ where: { userId } });
     if (!profile) throw new ForbiddenException("Not a chef account");
-    return profile.id;
+    return profile;
   }
 
   async checkIn(userId: string) {
-    const chefProfileId = await this.profileId(userId);
+    const profile = await this.profile(userId);
+    // Only APPROVED chefs may mark attendance.
+    if (profile.onboardingStatus !== "APPROVED") {
+      throw new ForbiddenException("Complete the verification process first");
+    }
     const existing = await this.prisma.attendanceLog.findUnique({
-      where: { chefProfileId_date: { chefProfileId, date: today() } },
+      where: { chefProfileId_date: { chefProfileId: profile.id, date: today() } },
     });
     if (existing) throw new ConflictException("Already checked in today");
     return this.prisma.attendanceLog.create({
-      data: { chefProfileId, date: today() },
+      data: { chefProfileId: profile.id, date: today() },
     });
   }
 
   async summary(userId: string) {
-    const chefProfileId = await this.profileId(userId);
+    const profile = await this.profile(userId);
     const [todayLog, recent] = await Promise.all([
       this.prisma.attendanceLog.findUnique({
-        where: { chefProfileId_date: { chefProfileId, date: today() } },
+        where: { chefProfileId_date: { chefProfileId: profile.id, date: today() } },
       }),
       this.prisma.attendanceLog.findMany({
-        where: { chefProfileId },
+        where: { chefProfileId: profile.id },
         orderBy: { checkInAt: "desc" },
         take: 10,
       }),
     ]);
-    return { checkedInToday: !!todayLog, today: todayLog, recent };
+    return {
+      onboardingStatus: profile.onboardingStatus,
+      canCheckIn: profile.onboardingStatus === "APPROVED",
+      checkedInToday: !!todayLog,
+      today: todayLog,
+      recent,
+    };
   }
 }

@@ -24,6 +24,7 @@ class ChefAttendanceScreen extends ConsumerWidget {
         if (log.date.toUtc().year == now.year && log.date.toUtc().month == now.month) log.date.toUtc().day,
     };
     final checkedIn = summary?.checkedInToday ?? false;
+    final canCheckIn = summary?.canCheckIn ?? false;
 
     return ChefScaffold(
       currentRoute: '/chef/attendance',
@@ -37,7 +38,7 @@ class ChefAttendanceScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _header(context, ref, wide, checkedIn, async.isLoading, now),
+                  _header(context, ref, wide, checkedIn, async.isLoading, now, canCheckIn),
                   const SizedBox(height: 24),
                   if (wide)
                     IntrinsicHeight(
@@ -80,18 +81,18 @@ class ChefAttendanceScreen extends ConsumerWidget {
     }
   }
 
-  Widget _header(BuildContext context, WidgetRef ref, bool wide, bool checkedIn, bool loading, DateTime now) {
+  Widget _header(BuildContext context, WidgetRef ref, bool wide, bool checkedIn, bool loading, DateTime now, bool canCheckIn) {
     final title = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Shift Attendance', style: AppText.headlineLg),
       const SizedBox(height: 8),
       Text('${_months[now.month - 1]} ${now.year}',
           style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
     ]);
+    final label = !canCheckIn ? 'VERIFY FIRST' : (checkedIn ? 'MARKED TODAY' : 'MARK ATTENDANCE');
     final button = FilledButton.icon(
-      onPressed: (checkedIn || loading) ? null : () => _checkIn(context, ref),
-      icon: Icon(checkedIn ? Icons.check : Icons.fingerprint),
-      label: Text(checkedIn ? 'MARKED TODAY' : 'MARK ATTENDANCE',
-          style: AppText.labelSm.copyWith(color: AppColors.clottedCream, letterSpacing: 1)),
+      onPressed: (!canCheckIn || checkedIn || loading) ? null : () => _checkIn(context, ref),
+      icon: Icon(!canCheckIn ? Icons.lock_outline : (checkedIn ? Icons.check : Icons.fingerprint)),
+      label: Text(label, style: AppText.labelSm.copyWith(color: AppColors.clottedCream, letterSpacing: 1)),
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.darkGanache,
         disabledBackgroundColor: AppColors.outline,

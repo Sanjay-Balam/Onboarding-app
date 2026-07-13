@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/api_client.dart';
 import '../../data/attendance.dart';
 import '../../data/auth.dart';
@@ -16,6 +17,7 @@ class ChefDashboardScreen extends ConsumerWidget {
     final async = ref.watch(chefAttendanceProvider);
     final summary = async.valueOrNull;
     final checkedIn = summary?.checkedInToday ?? false;
+    final canCheckIn = summary?.canCheckIn ?? false;
     final user = ref.watch(authProvider).user;
     final firstName = (user?.name?.trim().isNotEmpty ?? false)
         ? user!.name!.trim().split(' ').first
@@ -40,7 +42,7 @@ class ChefDashboardScreen extends ConsumerWidget {
                         : "Ready for today's shift — mark your attendance.",
                     style: AppText.bodyLg.copyWith(color: AppColors.onSurfaceVariant)),
                 const SizedBox(height: 24),
-                _checkInCard(context, ref, checkedIn, async.isLoading),
+                _checkInCard(context, ref, checkedIn, async.isLoading, canCheckIn),
                 const SizedBox(height: 24),
                 _statusRow(checkedIn),
                 const SizedBox(height: 24),
@@ -67,7 +69,41 @@ class ChefDashboardScreen extends ConsumerWidget {
     }
   }
 
-  Widget _checkInCard(BuildContext context, WidgetRef ref, bool checkedIn, bool loading) {
+  Widget _checkInCard(BuildContext context, WidgetRef ref, bool checkedIn, bool loading, bool canCheckIn) {
+    // Not verified yet → block check-in, prompt to finish KYC.
+    if (!canCheckIn) {
+      return AppCard(
+        border: Border.all(color: AppColors.outlineVariant.withOpacity(0.3)),
+        child: Column(children: [
+          Container(
+            width: 80, height: 80,
+            decoration: BoxDecoration(color: AppColors.tertiaryFixed, shape: BoxShape.circle),
+            child: const Icon(Icons.lock_outline, size: 36, color: AppColors.onTertiaryFixed),
+          ),
+          const SizedBox(height: 16),
+          Text('Attendance Locked', style: AppText.headlineLg, textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text('Complete the verification process before you can mark attendance.',
+              textAlign: TextAlign.center,
+              style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: () => context.go('/chef/onboarding'),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Complete Verification'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary, foregroundColor: AppColors.onPrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                textStyle: AppText.bodyMd.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ]),
+      );
+    }
     return AppCard(
       border: Border.all(color: AppColors.outlineVariant.withOpacity(0.3)),
       child: Column(children: [

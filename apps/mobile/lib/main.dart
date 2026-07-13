@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/auth.dart';
+import 'data/credentials_stub.dart' if (dart.library.html) 'data/credentials_web.dart';
 import 'router.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initCookieJar(); // native: load persisted cookies before first request
   runApp(const ProviderScope(child: WhySoCreamyApp()));
 }
 

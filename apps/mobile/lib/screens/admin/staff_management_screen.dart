@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/admin.dart';
 import '../../data/api_client.dart';
 import '../../theme/app_colors.dart';
@@ -46,7 +47,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
               : FloatingActionButton(
                   backgroundColor: AppColors.primary, foregroundColor: AppColors.onPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  onPressed: () => _createChefDialog(context),
+                  onPressed: () => context.go('/admin/chefs/new'),
                   child: const Icon(Icons.add),
                 ),
           body: RefreshIndicator(
@@ -112,7 +113,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       ),
       if (wide)
         FilledButton.icon(
-          onPressed: () => _createChefDialog(context),
+          onPressed: () => context.go('/admin/chefs/new'),
           icon: const Icon(Icons.add),
           label: const Text('Add New Chef'),
           style: FilledButton.styleFrom(
@@ -211,79 +212,6 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
           ]),
         ),
       ]),
-    );
-  }
-
-  Future<void> _createChefDialog(BuildContext context) async {
-    final name = TextEditingController();
-    final phone = TextEditingController();
-    bool busy = false;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) {
-        Future<void> submit() async {
-          if (name.text.trim().isEmpty || phone.text.trim().length < 6) return;
-          setLocal(() => busy = true);
-          try {
-            final creds = await ref.read(adminChefsProvider.notifier).createChef(name.text.trim(), phone.text.trim());
-            if (ctx.mounted) {
-              Navigator.pop(ctx);
-              _showCredentials(context, creds);
-            }
-          } on ApiException catch (e) {
-            setLocal(() => busy = false);
-            if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(e.message)));
-          }
-        }
-
-        return AlertDialog(
-          backgroundColor: AppColors.surfaceContainerLowest,
-          title: Text('Onboard New Chef', style: AppText.headlineSm),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-            const SizedBox(height: 12),
-            TextField(controller: phone, keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone')),
-          ]),
-          actions: [
-            TextButton(onPressed: busy ? null : () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: busy ? null : submit,
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.onPrimary),
-              child: busy
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimary))
-                  : const Text('Create'),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-
-  void _showCredentials(BuildContext context, Map<String, dynamic> creds) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceContainerLowest,
-        title: Text('Chef Created', style: AppText.headlineSm),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Share these login credentials with the chef (shown once):',
-              style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
-          const SizedBox(height: 12),
-          const CapsLabel('Login Email'),
-          SelectableText('${creds['loginEmail']}', style: AppText.bodyMd.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          const CapsLabel('Temporary Password'),
-          SelectableText('${creds['tempPassword']}', style: AppText.bodyMd.copyWith(fontWeight: FontWeight.w600)),
-        ]),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.onPrimary),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
     );
   }
 }

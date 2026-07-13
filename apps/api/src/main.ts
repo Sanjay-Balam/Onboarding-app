@@ -1,6 +1,6 @@
 import { config } from "dotenv";
-// Backend env (cwd is apps/api for both dev and prod).
-config({ path: ".env.development" });
+// Backend env by NODE_ENV (cwd is apps/api). prod → .env.production, else .env.development.
+config({ path: process.env.NODE_ENV === "production" ? ".env.production" : ".env.development" });
 
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";

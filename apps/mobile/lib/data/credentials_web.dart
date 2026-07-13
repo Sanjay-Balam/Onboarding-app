@@ -2,7 +2,9 @@ import 'dart:html' as html;
 import 'package:dio/dio.dart';
 import 'package:dio/browser.dart';
 
-// Web: browser stores the httpOnly cookie; withCredentials lets XHR send/receive it cross-origin.
+// Web: browser stores the httpOnly cookie; withCredentials sends/receives it.
+Future<void> initCookieJar() async {}
+
 void applyCredentials(Dio dio) {
   dio.httpClientAdapter = BrowserHttpClientAdapter(withCredentials: true);
 }

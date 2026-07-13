@@ -1,8 +1,19 @@
 import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:cookie_jar/cookie_jar.dart';
+import 'package:path_provider/path_provider.dart';
 
-// Mobile/native: cookies handled by a cookie jar (added later). No-op for now.
-// ponytail: add dio_cookie_manager when the native build needs persisted cookies.
-void applyCredentials(Dio dio) {}
+CookieJar? _jar;
 
-// Native: CSRF token comes back in the login response and lives in AuthState.
+// Native: persist cookies to disk so the auth cookie survives app restarts.
+Future<void> initCookieJar() async {
+  final dir = await getApplicationDocumentsDirectory();
+  _jar = PersistCookieJar(storage: FileStorage('${dir.path}/.cookies'));
+}
+
+void applyCredentials(Dio dio) {
+  dio.interceptors.add(CookieManager(_jar ?? CookieJar()));
+}
+
+// CSRF token is persisted in secure storage (see AuthController), not read here.
 String? readCsrfCookie() => null;

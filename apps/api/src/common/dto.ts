@@ -14,9 +14,20 @@ export class CreateChefDto {
   @MinLength(1)
   name!: string;
 
+  @IsEmail()
+  email!: string;
+
   @IsString()
   @MinLength(6)
   phone!: string;
+
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is2faEnabled?: boolean;
 }
 
 export class Toggle2faDto {

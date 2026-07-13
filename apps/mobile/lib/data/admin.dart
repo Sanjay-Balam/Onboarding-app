@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_client.dart';
+import 'auth.dart';
 
 class AdminDoc {
   AdminDoc({required this.id, required this.type, required this.mimeType, required this.verified});
@@ -46,8 +47,8 @@ class AdminChef {
     );
   }
 
-  AdminChef copyWith({bool? is2faEnabled}) => AdminChef(
-        id: id, name: name, email: email, phone: phone, status: status,
+  AdminChef copyWith({bool? is2faEnabled, String? status}) => AdminChef(
+        id: id, name: name, email: email, phone: phone, status: status ?? this.status,
         docCount: docCount, isActive: isActive, is2faEnabled: is2faEnabled ?? this.is2faEnabled,
       );
 }
@@ -55,6 +56,7 @@ class AdminChef {
 class AdminChefsNotifier extends AsyncNotifier<List<AdminChef>> {
   @override
   Future<List<AdminChef>> build() async {
+    ref.watch(authProvider.select((s) => s.user?.id)); // refetch when the user changes
     final data = await ref.read(apiProvider).get<List<dynamic>>('/admin/chefs');
     return data.map((e) => AdminChef.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -69,16 +71,23 @@ class AdminChefsNotifier extends AsyncNotifier<List<AdminChef>> {
     return res['url'] as String;
   }
 
+  void _setStatus(String chefProfileId, String status) {
+    final list = state.valueOrNull;
+    if (list != null) {
+      state = AsyncData([
+        for (final c in list) c.id == chefProfileId ? c.copyWith(status: status) : c,
+      ]);
+    }
+  }
+
   Future<void> approve(String chefProfileId) async {
     await ref.read(apiProvider).patch('/admin/chefs/$chefProfileId/approve');
-    ref.invalidateSelf();
-    await future;
+    _setStatus(chefProfileId, 'APPROVED'); // update state, no refetch
   }
 
   Future<void> reject(String chefProfileId) async {
     await ref.read(apiProvider).patch('/admin/chefs/$chefProfileId/reject');
-    ref.invalidateSelf();
-    await future;
+    _setStatus(chefProfileId, 'REJECTED');
   }
 
   /// Toggle login 2FA for a chef. Updates state in place (no refetch).
@@ -92,15 +101,56 @@ class AdminChefsNotifier extends AsyncNotifier<List<AdminChef>> {
     }
   }
 
-  /// Onboard a new chef. Returns generated login credentials (shown once).
-  Future<Map<String, dynamic>> createChef(String name, String phone) async {
-    final res = await ref.read(apiProvider)
-        .post<Map<String, dynamic>>('/admin/chefs', {'name': name, 'phone': phone});
-    ref.invalidateSelf();
-    await future;
-    return res;
+  /// Onboard a new chef with admin-entered credentials. Prepends to state, no refetch.
+  Future<void> createChef({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required bool is2faEnabled,
+  }) async {
+    final res = await ref.read(apiProvider).post<Map<String, dynamic>>('/admin/chefs', {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'password': password,
+      'is2faEnabled': is2faEnabled,
+    });
+    final created = AdminChef(
+      id: res['chefProfileId'] as String,
+      name: (res['name'] as String?)?.trim().isNotEmpty == true ? res['name'] as String : email,
+      email: res['email'] as String? ?? email,
+      phone: phone,
+      status: 'NOT_STARTED',
+      docCount: 0,
+      isActive: true,
+      is2faEnabled: is2faEnabled,
+    );
+    state = AsyncData([created, ...(state.valueOrNull ?? const <AdminChef>[])]);
   }
 }
 
 final adminChefsProvider =
     AsyncNotifierProvider<AdminChefsNotifier, List<AdminChef>>(AdminChefsNotifier.new);
+
+class AdminAttendance {
+  AdminAttendance({required this.name, required this.email, required this.date, required this.checkInAt});
+  final String name, email;
+  final DateTime date, checkInAt;
+  factory AdminAttendance.fromJson(Map<String, dynamic> j) {
+    final user = (j['chef']?['user'] ?? {}) as Map<String, dynamic>;
+    return AdminAttendance(
+      name: (user['name'] as String?)?.trim().isNotEmpty == true ? user['name'] as String : (user['email'] as String? ?? 'Chef'),
+      email: user['email'] as String? ?? '',
+      date: DateTime.parse(j['date'] as String),
+      checkInAt: DateTime.parse(j['checkInAt'] as String),
+    );
+  }
+}
+
+// All chefs' attendance logs (newest first) for the admin dashboard.
+final adminAttendanceProvider = FutureProvider<List<AdminAttendance>>((ref) async {
+  ref.watch(authProvider.select((s) => s.user?.id));
+  final data = await ref.read(apiProvider).get<List<dynamic>>('/admin/attendance');
+  return data.map((e) => AdminAttendance.fromJson(e as Map<String, dynamic>)).toList();
+});

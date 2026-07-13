@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'api_client.dart';
+import 'auth.dart';
 
 class Profile {
   Profile({
@@ -37,6 +38,7 @@ class Profile {
 }
 
 final profileProvider = FutureProvider<Profile>((ref) async {
+  ref.watch(authProvider.select((s) => s.user?.id)); // refetch when the user changes
   final data = await ref.read(apiProvider).get<Map<String, dynamic>>('/auth/profile');
   return Profile.fromJson(data);
 });

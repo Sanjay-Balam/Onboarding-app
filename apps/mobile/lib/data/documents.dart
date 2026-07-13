@@ -39,6 +39,7 @@ class ChefKyc {
 class ChefDocumentsNotifier extends AsyncNotifier<ChefKyc> {
   @override
   Future<ChefKyc> build() async {
+    ref.watch(authProvider.select((s) => s.user?.id)); // refetch when the user changes
     final data = await ref.read(apiProvider).get<Map<String, dynamic>>('/chef/documents');
     return ChefKyc.fromJson(data);
   }
